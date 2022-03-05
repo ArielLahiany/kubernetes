@@ -1,0 +1,37 @@
+- name: "deploy :: creates the root directory"
+  become: true
+  ansible.builtin.file:
+    path: "{{ kubernetes.addons }}"
+    state: directory
+
+- name: "deploy :: templates the dashboard manifests"
+  become: true
+  ansible.builtin.template:
+    src:    "dashboard.yaml.j2"
+    dest:   "{{ kubernetes.addons }}/dashboard.yaml"
+    owner:  "root"
+    group:  "root"
+    mode:   "0755"
+
+- name: "deploy :: applies the dashboard manifests"
+  ansible.builtin.shell: "kubectl apply -f {{ kubernetes.addons }}/dashboard.yaml"
+
+- name: "deploy :: creates a new service account for the dashboard"
+  ansible.builtin.shell: "kubectl create serviceaccount dashboard -n default"
+
+- name: "deploy :: creates a new cluster role binding for the dashboard"
+  ansible.builtin.shell: "kubectl create clusterrolebinding dashboard-admin -n default --clusterrole=cluster-admin --serviceaccount=default:dashboard"
+
+- name: "deploy :: gets the dashboard token"
+  ansible.builtin.shell: "kubectl  --kubeconfig={{ kubernetes.config }}/config get secret $(kubectl get serviceaccount dashboard -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode"
+  register: token
+
+- name: "deploy :: saves the dashboard token to a local file"
+  delegate_to: localhost
+  ansible.builtin.copy:
+    content: "{{ token.stdout }}"
+    dest: "{{ lookup('env', 'HOME') }}/.kube/dashboard"
+    owner: "{{ lookup('env', 'USER') }}"
+    group: "{{ lookup('env', 'USER') }}"
+    mode: "0755"
+  run_once: true

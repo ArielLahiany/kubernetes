@@ -1,0 +1,17 @@
+- name: "config :: creates the root directory"
+  become: true
+  ansible.builtin.file:
+    path: "{{ kubernetes.network }}"
+    state: directory
+
+- name: "deploy :: templates the MetalLB manifests"
+  become: true
+  ansible.builtin.template:
+    src:    "metallb.yaml.j2"
+    dest:   "{{ kubernetes.network }}/metallb.yaml"
+    owner:  "root"
+    group:  "root"
+    mode:   "0755"
+
+- name: "deploy :: applies the MetalLB manifests"
+  ansible.builtin.shell: "kubectl apply -f {{ kubernetes.network }}/metallb.yaml"

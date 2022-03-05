@@ -1,0 +1,12 @@
+dashboard:
+  prefix: "dashboard"
+
+kubernetes:
+  addons:   "/etc/kubernetes/addons"
+  config:   "/home/{{ ansible_user }}/.kube"
+  network:  "/etc/kubernetes/network"
+
+  CIDR: "10.244.0.0/16"
+
+metallb:
+  addresses: "192.168.14.195-192.168.14.210"

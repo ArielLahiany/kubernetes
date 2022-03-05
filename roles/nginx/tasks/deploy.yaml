@@ -1,0 +1,15 @@
+- name: "config :: creates the root directory"
+  become: true
+  ansible.builtin.file:
+    path: "{{ kubernetes.network }}"
+    state: directory
+
+- name: "deploy :: downloads the Nginx controller manifests"
+  become: true
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.1/deploy/static/provider/cloud/deploy.yaml"
+    dest: "{{ kubernetes.network }}/nginx.yaml"
+    mode: "0755"
+
+- name: "deploy :: applies the Nginx controller manifests"
+  ansible.builtin.shell: "kubectl apply -f {{ kubernetes.network }}/nginx.yaml"

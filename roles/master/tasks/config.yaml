@@ -1,0 +1,65 @@
+- name: "config :: disables system swap"
+  become: true
+  ansible.builtin.shell: "swapoff -a"
+
+- name: "config :: removes current swaps from the filesystem tab"
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/etc/fstab"
+    regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+    line: '# \1'
+    backrefs: true
+    state: present
+
+- name: "config :: ensures that br_netfilter is enabled"
+  become: true
+  community.general.modprobe:
+    name: "br_netfilter"
+    state: present
+
+- name: "config :: sets the required networking rules"
+  become: true
+  ansible.builtin.sysctl:
+    name: "{{ item }}"
+    value: "1"
+    state: present
+    reload: true
+  loop:
+    - "net.bridge.bridge-nf-call-iptables"
+    - "net.ipv4.ip_forward"
+
+- name: "config :: initializes the cluster"
+  become: true
+  ansible.builtin.shell: |
+    kubeadm init --pod-network-cidr={{ kubernetes.CIDR }} \
+                 --token {{ cluster.token }} \
+                 --apiserver-advertise-address {{ ansible_default_ipv4.address }} \
+                 --cri-socket=/var/run/containerd/containerd.sock \
+                 --apiserver-cert-extra-sans "{{ cluster.domain }}"
+  register: init
+
+- name: "config :: creates the root directory"
+  ansible.builtin.file:
+    path: "{{ kubernetes.config }}"
+    state: directory
+
+- name: "config :: copies the configuration file to the home directory"
+  become: true
+  ansible.builtin.copy:
+    src: "/etc/kubernetes/admin.conf"
+    dest: "{{ kubernetes.config }}/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+    remote_src: true
+
+- name: "config :: fetches the configuration file to the local station"
+  become: true
+  ansible.builtin.fetch:
+    src: "/etc/kubernetes/admin.conf"
+    dest: "{{ lookup('env', 'HOME') }}/.kube/config"
+    owner: "{{ lookup('env', 'USER') }}"
+    group: "{{ lookup('env', 'USER') }}"
+    mode: "0755"
+    flat: true
+  run_once: true

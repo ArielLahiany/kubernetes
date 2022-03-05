@@ -1,0 +1,15 @@
+- name: "config :: creates the root directory"
+  become: true
+  ansible.builtin.file:
+    path: "{{ kubernetes.network }}"
+    state: directory
+
+- name: "deploy :: downloads the Calico manifests"
+  become: true
+  ansible.builtin.get_url:
+    url: "https://projectcalico.docs.tigera.io/manifests/calico.yaml"
+    dest: "{{ kubernetes.network }}/calico.yaml"
+    mode: "0755"
+
+- name: "deploy :: applies the Calico manifests"
+  ansible.builtin.shell: "kubectl apply -f {{ kubernetes.network }}/calico.yaml"
