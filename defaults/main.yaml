@@ -9,4 +9,4 @@ kubernetes:
   CIDR: "10.244.0.0/16"
 
 metallb:
-  addresses: "192.168.14.195-192.168.14.210"
+  addresses: "<MetalLB IPv4 addresses range>"
